@@ -1,0 +1,167 @@
+<!<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard - Cloud File Storage</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body onload="loadFiles()">
+
+<div class="container">
+
+    <div class="header">
+        <div>
+            <h1>Cloud File Storage System</h1>
+            <p>Upload, manage, download and share your files securely.</p>
+        </div>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+
+    <div class="card">
+        <h2>Upload File</h2>
+        <p>Select a file from your device and upload it to cloud storage.</p>
+
+        <div class="upload-area">
+            <input type="file" id="fileInput">
+            <button onclick="uploadFile()">Upload</button>
+        </div>
+
+        <p id="msg"></p>
+    </div>
+
+    <div class="card">
+        <div class="file-header">
+            <div>
+                <h2>Your Files</h2>
+                <p>All uploaded files are stored in Cloudinary.</p>
+            </div>
+            <button onclick="loadFiles()">Refresh</button>
+        </div>
+
+        <div class="table-box">
+            <table>
+                <thead>
+                    <tr>
+                        <th>File Name</th>
+                        <th>Type</th>
+                        <th>Size</th>
+                        <th>Download</th>
+                        <th>Delete</th>
+                        <th>Share</th>
+                    </tr>
+                </thead>
+                <tbody id="fileTable"></tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<script>
+let userId = localStorage.getItem("userId");
+
+if (!userId) {
+    window.location.href = "login.html";
+}
+
+function uploadFile() {
+    let file = document.getElementById("fileInput").files[0];
+
+    if (!file) {
+        alert("Please select file");
+        return;
+    }
+
+    let formData = new FormData();
+    formData.append("file", file);
+
+    document.getElementById("msg").innerText = "Uploading...";
+
+    fetch("http://localhost:8080/files/upload/" + userId, {
+        method: "POST",
+        body: formData
+    })
+    .then(response => response.text())
+    .then(data => {
+        document.getElementById("msg").innerText = data;
+        document.getElementById("fileInput").value = "";
+        loadFiles();
+    })
+    .catch(error => {
+        document.getElementById("msg").innerText = "Upload failed";
+        console.error(error);
+    });
+}
+
+function loadFiles() {
+    fetch("http://localhost:8080/files/list/" + userId)
+    .then(response => response.json())
+    .then(files => {
+        let table = document.getElementById("fileTable");
+        table.innerHTML = "";
+
+        if (files.length === 0) {
+            table.innerHTML = `
+                <tr>
+                    <td colspan="6" class="empty">No files uploaded yet</td>
+                </tr>
+            `;
+            return;
+        }
+
+        files.forEach(file => {
+            let sizeKB = (file.fileSize / 1024).toFixed(2);
+
+            let shortType = file.fileType;
+            if (shortType && shortType.length > 35) {
+                shortType = shortType.substring(0, 35) + "...";
+            }
+
+            table.innerHTML += `
+                <tr>
+                    <td>${file.fileName}</td>
+                    <td>${shortType}</td>
+                    <td>${sizeKB} KB</td>
+                    <td>
+                        <a href="${file.fileUrl}" target="_blank" download>Download</a>
+                    </td>
+                    <td>
+                        <button class="delete-btn" onclick="deleteFile(${file.id})">Delete</button>
+                    </td>
+                    <td>
+                        <button class="share-btn" onclick="shareFile('${file.fileUrl}')">Share</button>
+                    </td>
+                </tr>
+            `;
+        });
+    });
+}
+
+function deleteFile(fileId) {
+    if (!confirm("Are you sure you want to delete this file?")) {
+        return;
+    }
+
+    fetch("http://localhost:8080/files/delete/" + fileId, {
+        method: "DELETE"
+    })
+    .then(response => response.text())
+    .then(data => {
+        alert(data);
+        loadFiles();
+    });
+}
+
+function shareFile(fileUrl) {
+    navigator.clipboard.writeText(fileUrl);
+    alert("Share link copied successfully!");
+}
+
+function logout() {
+    localStorage.removeItem("userId");
+    window.location.href = "login.html";
+}
+</script>
+
+</body>
+</html>

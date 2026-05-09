@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login - Cloud File Storage</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="box">
+    <h2>Login</h2>
+
+    <input type="email" id="email" placeholder="Enter email">
+    <input type="password" id="password" placeholder="Enter password">
+
+    <button onclick="login()">Login</button>
+
+    <p id="msg"></p>
+
+    <a href="register.html">Create new account</a>
+</div>
+
+<script>
+function login() {
+    let user = {
+        email: document.getElementById("email").value,
+        password: document.getElementById("password").value
+    };
+
+    fetch("http://localhost:8080/auth/login", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(user)
+    })
+    .then(response => response.text())
+    .then(data => {
+        if (data.startsWith("Login successful")) {
+            let userId = data.split(":")[1];
+            localStorage.setItem("userId", userId);
+            window.location.href = "dashboard.html";
+        } else {
+            document.getElementById("msg").innerText = data;
+        }
+    });
+}
+</script>
+
+</body>
+</html>
